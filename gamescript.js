@@ -1176,7 +1176,7 @@ handleResize() {
     }
 }
 
-// Sample Game Page (after clicking Begin Journey)
+// Modified SampleGamePage with improved positioning
 class SampleGamePage extends Phaser.Scene {
     constructor() {
         super('SampleGamePage');
@@ -1200,53 +1200,92 @@ class SampleGamePage extends Phaser.Scene {
             strokeThickness: 4,
         }).setOrigin(0.5);
         
-        // Add some placeholder content
+        // Add some placeholder content with better word wrap
         const contentText = "You have entered the world of Solara, where your journey begins. This is where the main gameplay would start, with character creation, exploration, or the first mission. Future development will expand this section with interactive gameplay elements.";
         
-        this.contentDisplay = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 50, contentText, {
-            fontFamily: 'ARCADECLASSIC, Arial',
-            fontSize: '24px',
-            fill: '#FFFFFF',
-            align: 'center',
-            wordWrap: { width: this.cameras.main.width * 0.7 },
-            lineSpacing: 10,
-        }).setOrigin(0.5, 0.5);
+        // Create content text with dynamic word wrap width - positioned higher up
+        this.contentDisplay = this.add.text(
+            this.cameras.main.centerX, 
+            this.cameras.main.height * 0.25, // Position at 25% of screen height
+            contentText, 
+            {
+                fontFamily: 'ARCADECLASSIC, Arial',
+                fontSize: '24px',
+                fill: '#FFFFFF',
+                align: 'center',
+                wordWrap: { width: Math.min(this.cameras.main.width * 0.8, 800) }, // Dynamic width based on screen size
+                lineSpacing: 10,
+            }
+        ).setOrigin(0.5, 0.5);
         
-        // Add a character placeholder
-        this.characterPlaceholder = this.add.rectangle(
-            this.cameras.main.centerX,
-            this.cameras.main.centerY + 100,
-            100,
-            150,
-            0x00AA55 // Green color for character
-        );
-        this.characterPlaceholder.setStrokeStyle(3, 0xFFFFFF);
+        // Calculate positions and sizes for the two characters
+        const baseSize = Math.min(this.cameras.main.width, this.cameras.main.height);
+        const charWidth = baseSize * 0.1; // 10% of screen size (smaller than before)
+        const charHeight = charWidth * 1.8; // Make it taller than wide
         
-        // Add text below the character
-        this.characterLabel = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 190, 'YOUR CHARACTER', {
-            fontFamily: 'ARCADECLASSIC, Arial',
-            fontSize: '20px',
-            fill: '#FFFFFF',
-            align: 'center',
-        }).setOrigin(0.5);
+        // Position characters at 60% of screen height - plenty of space from text
+        const charY = this.cameras.main.height * 0.55; 
+        const spacing = Math.max(charWidth * 2, this.cameras.main.width * 0.15); // Wider spacing
         
-        // Create MAIN MENU button (cosmic blue)
+        // Create Solis character placeholder (left character - blue)
+        this.solisPlaceholder = this.add.rectangle(
+            this.cameras.main.centerX - spacing/2, 
+            charY,
+            charWidth,
+            charHeight,
+            0x3366CC // Blue color for Solis
+        ).setStrokeStyle(3, 0xFFFFFF);
+        
+        // Create Lunae character placeholder (right character - purple)
+        this.lunaePlaceholder = this.add.rectangle(
+            this.cameras.main.centerX + spacing/2, 
+            charY,
+            charWidth,
+            charHeight,
+            0xAA66CC // Purple color for Lunae
+        ).setStrokeStyle(3, 0xFFFFFF);
+        
+        // Add text below each character - positioned with more space
+        this.solisLabel = this.add.text(
+            this.cameras.main.centerX - spacing/2, 
+            charY + charHeight/2 + 30, // More space between character and label
+            'SOLIS', 
+            {
+                fontFamily: 'ARCADECLASSIC, Arial',
+                fontSize: '20px',
+                fill: '#FFFFFF',
+                align: 'center',
+            }
+        ).setOrigin(0.5);
+        
+        this.lunaeLabel = this.add.text(
+            this.cameras.main.centerX + spacing/2, 
+            charY + charHeight/2 + 30, // More space between character and label
+            'LUNAE', 
+            {
+                fontFamily: 'ARCADECLASSIC, Arial',
+                fontSize: '20px',
+                fill: '#FFFFFF',
+                align: 'center',
+            }
+        ).setOrigin(0.5);
+        
+        // Create MAIN MENU button (cosmic blue) - positioned higher up from bottom
         const buttonWidth = 200;
         const buttonHeight = 50;
         const cosmicBlue = 0x4AA8C0;
         
         const menuBg = this.add.rectangle(
             this.cameras.main.centerX, 
-            this.cameras.main.height - 50, 
+            this.cameras.main.height - 70, // More space from bottom
             buttonWidth, 
             buttonHeight, 
             cosmicBlue
-        );
-        menuBg.setStrokeStyle(4, 0xFFFFFF);
+        ).setStrokeStyle(4, 0xFFFFFF);
         
         const menuText = this.add.text(
             this.cameras.main.centerX, 
-            this.cameras.main.height - 50, 
+            this.cameras.main.height - 70, // Match rectangle position
             'MAIN MENU', 
             {
                 fontFamily: 'ARCADECLASSIC, Arial',
@@ -1273,21 +1312,30 @@ class SampleGamePage extends Phaser.Scene {
             });
         });
         
+        // Store references for resize handling
+        this.menuButton = { bg: menuBg, text: menuText };
+        
         // Add resize handler
         this.scale.on('resize', this.handleResize, this);
-        
-        // Store button reference
-        this.menuButton = { bg: menuBg, text: menuText };
         
         // Apply brightness from global settings
         this.applyBrightness(globalSettings.brightness);
     }
     
-    // Handle resize event
+    // Improved responsive resize handler
     handleResize() {
         if (!this.scene.isActive()) return;
         
         console.log("Resizing SampleGamePage");
+        
+        // Define scale factors for consistent sizing
+        const screenScaleFactor = Math.max(0.6, Math.min(1.2, this.cameras.main.width / 800));
+        
+        // Calculate responsive sizes
+        const baseSize = Math.min(this.cameras.main.width, this.cameras.main.height);
+        const charWidth = baseSize * 0.1; // 10% of screen size
+        const charHeight = charWidth * 1.8; // Make it taller than wide
+        const spacing = Math.max(charWidth * 2, this.cameras.main.width * 0.15); // Wider spacing
         
         // Resize background
         if (this.background) {
@@ -1304,28 +1352,74 @@ class SampleGamePage extends Phaser.Scene {
         // Resize title
         if (this.titleText) {
             this.titleText.setPosition(this.cameras.main.centerX, 80);
+            // Adjust font size based on screen width
+            const baseFontSize = 48;
+            this.titleText.setFontSize(Math.round(baseFontSize * screenScaleFactor));
         }
         
-        // Resize content text
+        // Resize content text - IMPORTANT FIX FOR TEXT WRAPPING
         if (this.contentDisplay) {
-            this.contentDisplay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY - 50);
-            this.contentDisplay.setWordWrapWidth(this.cameras.main.width * 0.7);
+            // Update position - fixed percentage of screen height
+            this.contentDisplay.setPosition(this.cameras.main.centerX, this.cameras.main.height * 0.25);
+            
+            // Update word wrap width based on new screen size
+            this.contentDisplay.setWordWrapWidth(Math.min(this.cameras.main.width * 0.8, 800));
+            
+            // Adjust font size for smaller screens
+            const baseFontSize = 24;
+            this.contentDisplay.setFontSize(Math.round(baseFontSize * screenScaleFactor));
         }
         
-        // Resize character placeholder
-        if (this.characterPlaceholder) {
-            this.characterPlaceholder.setPosition(this.cameras.main.centerX, this.cameras.main.centerY + 100);
+        // Fixed position for characters - always at 55% of screen height
+        const charY = this.cameras.main.height * 0.55;
+        
+        // Resize Solis character
+        if (this.solisPlaceholder) {
+            this.solisPlaceholder.setPosition(this.cameras.main.centerX - spacing/2, charY);
+            this.solisPlaceholder.setSize(charWidth, charHeight);
+            
+            // Update Solis label position
+            if (this.solisLabel) {
+                this.solisLabel.setPosition(
+                    this.cameras.main.centerX - spacing/2, 
+                    charY + charHeight/2 + 30 // Fixed distance below character
+                );
+                
+                // Scale font size with properly defined scale factor
+                const labelFontSize = 20;
+                this.solisLabel.setFontSize(Math.round(labelFontSize * screenScaleFactor));
+            }
         }
         
-        // Resize character label
-        if (this.characterLabel) {
-            this.characterLabel.setPosition(this.cameras.main.centerX, this.cameras.main.centerY + 190);
+        // Resize Lunae character
+        if (this.lunaePlaceholder) {
+            this.lunaePlaceholder.setPosition(this.cameras.main.centerX + spacing/2, charY);
+            this.lunaePlaceholder.setSize(charWidth, charHeight);
+            
+            // Update Lunae label position
+            if (this.lunaeLabel) {
+                this.lunaeLabel.setPosition(
+                    this.cameras.main.centerX + spacing/2, 
+                    charY + charHeight/2 + 30 // Fixed distance below character
+                );
+                
+                // Scale font size with properly defined scale factor
+                const labelFontSize = 20;
+                this.lunaeLabel.setFontSize(Math.round(labelFontSize * screenScaleFactor));
+            }
         }
         
-        // Resize menu button
+        // Resize menu button - fixed distance from bottom
         if (this.menuButton) {
-            this.menuButton.bg.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
-            this.menuButton.text.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+            // Scale button size based on screen width
+            const buttonWidth = 200 * screenScaleFactor;
+            const buttonHeight = 50 * screenScaleFactor;
+            
+            this.menuButton.bg.setPosition(this.cameras.main.centerX, this.cameras.main.height - 70);
+            this.menuButton.bg.setSize(buttonWidth, buttonHeight);
+            
+            this.menuButton.text.setPosition(this.cameras.main.centerX, this.cameras.main.height - 70);
+            this.menuButton.text.setFontSize(Math.round(32 * screenScaleFactor));
         }
     }
     
