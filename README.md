@@ -15,5 +15,5 @@ Navigate through this storytelling journey through plains, storms, and caverns, 
 
 Enjoy, and let me know what you think.
 
-## Special Thanks ❤️
-My special someone, who taught me to love properly and continues to shape me into a better person everyday with her presence in my life. Thank you baby.
+## Special Thanks/My Inspiration ❤️
+My special someone, who taught me to love properly and continues to shape me into a better person everyday with her presence in my life. Thank you baby. I love you more than you can ever imagine
