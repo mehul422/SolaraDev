@@ -5,6 +5,50 @@ const globalSettings = {
     musicVolume: 60  // percentage
 };
 
+// Utility function to get a lighter variant of a color
+function getLighterColor(color) {
+    const r = (color >> 16) & 0xFF;
+    const g = (color >> 8) & 0xFF;
+    const b = color & 0xFF;
+    
+    // Lighten by 20%
+    const newR = Math.min(255, r + (255 - r) * 0.2);
+    const newG = Math.min(255, g + (255 - g) * 0.2);
+    const newB = Math.min(255, b + (255 - b) * 0.2);
+    
+    return (Math.floor(newR) << 16) | (Math.floor(newG) << 8) | Math.floor(newB);
+}
+
+// Resize handling utilities
+const gameState = {
+    isResizing: false,
+    resizeTimeout: null
+};
+
+// Safe resize function
+function handleResize() {
+    if (gameState.isResizing) return;
+    
+    gameState.isResizing = true;
+    
+    if (gameState.resizeTimeout) {
+        clearTimeout(gameState.resizeTimeout);
+    }
+    
+    gameState.resizeTimeout = setTimeout(() => {
+        if (game && game.scale) {
+            game.scale.resize(window.innerWidth, window.innerHeight);
+            
+            // Force the current scene to resize
+            const currentScene = game.scene.getScenes(true)[0];
+            if (currentScene && typeof currentScene.handleResize === 'function') {
+                currentScene.handleResize();
+            }
+        }
+        gameState.isResizing = false;
+    }, 250);
+}
+
 // Main Menu Scene
 class MainMenu extends Phaser.Scene {
     constructor() {
@@ -234,6 +278,78 @@ class MainMenu extends Phaser.Scene {
         
         // Apply brightness from global settings
         this.applyBrightness(globalSettings.brightness);
+        
+        // Add resize handling
+        this.scale.on('resize', this.handleResize, this);
+        
+        // Store references for resize handling
+        this.titleContainer = lettersContainer;
+        this.startButton = { bg: startBg, text: startText };
+        this.optionsButton = { bg: optionsBg, text: optionsText };
+        this.exitButton = { bg: exitBg, text: exitText };
+    }
+    
+    // Handle resize event
+    handleResize() {
+        if (!this.scene.isActive()) return;
+        
+        console.log("Resizing MainMenu scene");
+        
+        // Resize background
+        if (this.background) {
+            this.background.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.background.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize darkness overlay if it exists
+        if (this.darknessOverlay) {
+            this.darknessOverlay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.darknessOverlay.setSize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize title container
+        if (this.titleContainer) {
+            this.titleContainer.setPosition(this.cameras.main.centerX, 100);
+        }
+        
+        // Calculate responsive button positions
+        const heightRatio = this.cameras.main.height / 600;
+        
+        // Resize start button
+        if (this.startButton) {
+            this.startButton.bg.setPosition(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY - (50 * heightRatio)
+            );
+            this.startButton.text.setPosition(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY - (50 * heightRatio)
+            );
+        }
+        
+        // Resize options button
+        if (this.optionsButton) {
+            this.optionsButton.bg.setPosition(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY + (30 * heightRatio)
+            );
+            this.optionsButton.text.setPosition(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY + (30 * heightRatio)
+            );
+        }
+        
+        // Resize exit button
+        if (this.exitButton) {
+            this.exitButton.bg.setPosition(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY + (110 * heightRatio)
+            );
+            this.exitButton.text.setPosition(
+                this.cameras.main.centerX,
+                this.cameras.main.centerY + (110 * heightRatio)
+            );
+        }
     }
     
     startGame() {
@@ -325,7 +441,7 @@ class OptionsScene extends Phaser.Scene {
             .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
             
         // Add title
-        this.add.text(this.cameras.main.centerX, 50, 'OPTIONS', {
+        this.titleText = this.add.text(this.cameras.main.centerX, 50, 'OPTIONS', {
             fontFamily: 'ARCADECLASSIC, Arial',
             fontSize: '48px',
             fill: '#FFFFFF', // Changed to white
@@ -386,11 +502,20 @@ class OptionsScene extends Phaser.Scene {
         
         // Apply brightness when scene starts
         this.applyBrightness(this.settings.brightness);
+        
+        // Add resize handling
+        this.scale.on('resize', this.handleResize, this);
+        
+        // Store references for resize handling
+        this.backButton = { bg: backBg, text: backText };
     }
     
     createKeybindSection() {
         const startY = 120;
         const spacing = 50;
+        
+        // Container for keybind elements
+        this.keybindContainer = this.add.container(0, 0);
         
         // Create keybind buttons
         let i = 0;
@@ -398,7 +523,7 @@ class OptionsScene extends Phaser.Scene {
             const y = startY + 40 + (i * spacing);
             
             // Action name
-            this.add.text(this.cameras.main.centerX - 150, y, action.toUpperCase(), {
+            const actionText = this.add.text(this.cameras.main.centerX - 150, y, action.toUpperCase(), {
                 fontFamily: 'ARCADECLASSIC, Arial',
                 fontSize: '24px',
                 fill: '#FFFFFF',
@@ -445,6 +570,11 @@ class OptionsScene extends Phaser.Scene {
                 this.startRemapping(keyButton);
             });
             
+            // Add to container
+            this.keybindContainer.add(actionText);
+            this.keybindContainer.add(keyButton);
+            this.keybindContainer.add(keyText);
+            
             i++;
         }
     }
@@ -452,8 +582,11 @@ class OptionsScene extends Phaser.Scene {
     createBrightnessSection() {
         const startY = 350;
         
+        // Container for brightness elements
+        this.brightnessContainer = this.add.container(0, 0);
+        
         // Brightness label
-        this.add.text(this.cameras.main.centerX - 150, startY + 50, 'BRIGHTNESS', {
+        const brightnessLabel = this.add.text(this.cameras.main.centerX - 150, startY + 50, 'BRIGHTNESS', {
             fontFamily: 'ARCADECLASSIC, Arial',
             fontSize: '24px',
             fill: '#FFFFFF',
@@ -515,6 +648,111 @@ class OptionsScene extends Phaser.Scene {
             // Apply brightness effect to the game
             this.applyBrightness(percentage);
         });
+        
+        // Add elements to container
+        this.brightnessContainer.add(brightnessLabel);
+        this.brightnessContainer.add(track);
+        this.brightnessContainer.add(handle);
+        this.brightnessContainer.add(valueText);
+        
+        // Store references
+        this.brightnessTrack = track;
+        this.brightnessHandle = handle;
+        this.brightnessValue = valueText;
+    }
+    
+    // Handle resize event
+    handleResize() {
+        if (!this.scene.isActive()) return;
+        
+        console.log("Resizing OptionsScene");
+        
+        // Resize background
+        if (this.background) {
+            this.background.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.background.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize darkness overlay if it exists
+        if (this.darknessOverlay) {
+            this.darknessOverlay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.darknessOverlay.setSize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize title
+        if (this.titleText) {
+            this.titleText.setPosition(this.cameras.main.centerX, 50);
+        }
+        
+        // Resize keybind section
+        this.resizeKeybindSection();
+        
+        // Resize brightness section
+        this.resizeBrightnessSection();
+        
+        // Resize back button
+        if (this.backButton) {
+            this.backButton.bg.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+            this.backButton.text.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+        }
+    }
+    
+    // Resize keybind section
+    resizeKeybindSection() {
+        if (!this.keybindContainer) return;
+        
+        const elements = this.keybindContainer.list;
+        const startY = 120;
+        const spacing = 50;
+        
+        // Find all action texts, buttons, and key texts
+        const actionTexts = elements.filter(el => el.type === 'Text' && el.originX === 1);
+        const keyButtons = elements.filter(el => el.type === 'Rectangle');
+        const keyTexts = elements.filter(el => el.type === 'Text' && el.originX === 0.5);
+        
+        // Update each set of elements
+        for (let i = 0; i < actionTexts.length; i++) {
+            const y = startY + 40 + (i * spacing);
+            
+            actionTexts[i].setPosition(this.cameras.main.centerX - 150, y);
+            keyButtons[i].setPosition(this.cameras.main.centerX + 20, y);
+            keyTexts[i].setPosition(this.cameras.main.centerX + 20, y);
+        }
+    }
+    
+    // Resize brightness section
+    resizeBrightnessSection() {
+        if (!this.brightnessContainer) return;
+        
+        const startY = 350;
+        const trackWidth = 200;
+        
+        // Get references to elements
+        const elements = this.brightnessContainer.list;
+        const brightnessLabel = elements.find(el => el.type === 'Text' && el.originX === 1);
+        const track = elements.find(el => el.type === 'Rectangle' && el.width === 200);
+        const handle = elements.find(el => el.type === 'Rectangle' && el.width === 20);
+        const valueText = elements.find(el => el.type === 'Text' && el.originX === 0);
+        
+        // Update positions
+        if (brightnessLabel) {
+            brightnessLabel.setPosition(this.cameras.main.centerX - 150, startY + 50);
+        }
+        
+        if (track) {
+            track.setPosition(this.cameras.main.centerX + 20, startY + 50);
+        }
+        
+        if (handle && track) {
+            // Recalculate handle position based on current brightness value
+            const leftBound = this.cameras.main.centerX + 20 - (trackWidth/2);
+            const handleX = leftBound + (this.settings.brightness/100 * trackWidth);
+            handle.setPosition(handleX, startY + 50);
+        }
+        
+        if (valueText) {
+            valueText.setPosition(this.cameras.main.centerX + 140, startY + 50);
+        }
     }
     
     startRemapping(keyButton) {
@@ -591,8 +829,6 @@ class OptionsScene extends Phaser.Scene {
                 this.darknessOverlay.setAlpha(0);
             }
         }
-        
-        console.log(`Brightness set to ${value}%`);
     }
 }
 
@@ -603,6 +839,9 @@ class GameScene extends Phaser.Scene {
         
         // Opening crawl text
         this.openingText = "There was once a powerful, yet agile warrior named Solis on the planet of Lumina.\nSpecializing in speed and light, he often lets emotional attachments and overthinking get the best of him. He ventures out on a self-reflection journey, trying to fix his flaws to become a better person overall.\nBut, fate soon has different plans when he meets a celestial princess named Lunae: she is everything he could hope for in somebody who is pretty, daring, and has emotional control in her personality.\nBoth of them meet coincindentally while trying to find themselves, and you will be exploring their journey of finding one another amongst themselves, gaining maturity and mental fortitude along the way.\nSo, are you ready?";
+        
+        this.crawlActive = false;
+        this.crawlCompleted = false;
     }
 
     create() {
@@ -616,7 +855,7 @@ class GameScene extends Phaser.Scene {
         this.createBeginJourneyButton();
         
         // Add Synopsis title at the top
-        const synopsisTitle = this.add.text(this.cameras.main.centerX, 70, 'SYNOPSIS', {
+        this.synopsisTitle = this.add.text(this.cameras.main.centerX, 70, 'SYNOPSIS', {
             fontFamily: 'ARCADECLASSIC, Arial',
             fontSize: '48px',
             fill: '#FFFFFF', 
@@ -626,7 +865,7 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // Create text for crawl - straight and centered
-        const crawlText = this.add.text(
+        this.crawlText = this.add.text(
             this.cameras.main.centerX, 
             this.cameras.main.height + 50, // Start below the screen
             this.openingText, 
@@ -640,19 +879,21 @@ class GameScene extends Phaser.Scene {
             }
         ).setOrigin(0.5, 0);
         
-        // No tilt angle - keeping it straight for better readability
-        
         // Animate the text crawling upward
-        this.tweens.add({
-            targets: crawlText,
-            y: -crawlText.height, // Move up until it's off the top of the screen
-            duration: 10000, // 30 seconds to complete the crawl
+        this.crawlTween = this.tweens.add({
+            targets: this.crawlText,
+            y: -this.crawlText.height, // Move up until it's off the top of the screen
+            duration: 30000, // 30 seconds to complete the crawl
             ease: 'Linear',
             onComplete: () => {
                 // Show Begin Journey button when crawl is complete
                 this.showBeginJourneyButton();
+                this.crawlCompleted = true;
+                this.crawlActive = false;
             }
         });
+        
+        this.crawlActive = true;
         
         // Create MAIN MENU button (cosmic blue)
         const buttonWidth = 200;
@@ -699,13 +940,139 @@ class GameScene extends Phaser.Scene {
             });
         });
         
+        // Store references for resize handling
+        this.menuButton = { bg: menuBg, text: menuText };
+        
+        // Add resize handling
+        this.scale.on('resize', this.handleResize, this);
+        
         // Apply brightness from global settings
         this.applyBrightness(globalSettings.brightness);
     }
-
-    update() {
-        // Game logic goes here
+    
+    // Handle resize event
+    handleResize() {
+        if (!this.scene.isActive()) return;
+        
+        console.log("Resizing GameScene");
+        
+        // Resize background
+        if (this.background) {
+            this.background.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.background.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize darkness overlay if it exists
+        if (this.darknessOverlay) {
+            this.darknessOverlay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.darknessOverlay.setSize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize synopsis title
+        if (this.synopsisTitle) {
+            this.synopsisTitle.setPosition(this.cameras.main.centerX, 70);
+        }
+        
+        // Resize crawl text
+        this.resizeCrawlText();
+        
+        // Resize begin journey button
+        if (this.beginJourneyBg) {
+            this.beginJourneyBg.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.beginJourneyText.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+        }
+        
+        // Resize main menu button
+        if (this.menuButton) {
+            this.menuButton.bg.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+            this.menuButton.text.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+        }
     }
+    
+// Replace the existing resizeCrawlText method in the GameScene class with this improved version
+resizeCrawlText() {
+    if (!this.crawlText) return;
+    
+    // Update word wrap width based on new screen size
+    this.crawlText.setWordWrapWidth(this.cameras.main.width * 0.7);
+    
+    // Re-center the text horizontally
+    this.crawlText.setX(this.cameras.main.centerX);
+    
+    // If animation is ongoing, adjust it based on current progress
+    if (this.crawlActive && this.crawlTween && this.crawlTween.isPlaying()) {
+        // Get current progress
+        const progress = this.crawlTween.progress;
+        
+        // Stop current tween
+        this.crawlTween.stop();
+        
+        // Calculate start and end positions
+        const startY = this.cameras.main.height + 50;
+        const endY = -this.crawlText.height;
+        
+        // Calculate current position based on progress
+        const currentY = startY - (progress * (startY - endY));
+        this.crawlText.setY(currentY);
+        
+        // Restart animation from current position
+        const remainingDuration = 30000 * (1 - progress);
+        this.crawlTween = this.tweens.add({
+            targets: this.crawlText,
+            y: endY,
+            duration: remainingDuration,
+            ease: 'Linear',
+            onComplete: () => {
+                this.showBeginJourneyButton();
+                this.crawlCompleted = true;
+                this.crawlActive = false;
+            }
+        });
+    } else if (this.crawlCompleted) {
+        // If crawl is completed, ensure it's off screen
+        this.crawlText.setY(-this.crawlText.height);
+    }
+}
+
+// Also update the create method to add the resize handler for the crawlText
+// Add this code in the create method after creating the crawlText
+handleResize() {
+    if (!this.scene.isActive()) return;
+    
+    console.log("Resizing GameScene");
+    
+    // Resize background
+    if (this.background) {
+        this.background.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+        this.background.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+    }
+    
+    // Resize darkness overlay if it exists
+    if (this.darknessOverlay) {
+        this.darknessOverlay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+        this.darknessOverlay.setSize(this.cameras.main.width, this.cameras.main.height);
+    }
+    
+    // Resize synopsis title
+    if (this.synopsisTitle) {
+        this.synopsisTitle.setPosition(this.cameras.main.centerX, 70);
+    }
+    
+    // Handle crawl text resizing
+    this.resizeCrawlText();
+    
+    // Resize begin journey button
+    if (this.beginJourneyBg) {
+        this.beginJourneyBg.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+        this.beginJourneyText.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+    }
+    
+    // Resize main menu button
+    if (this.menuButton) {
+        this.menuButton.bg.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+        this.menuButton.text.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+    }
+}
     
     // Create Begin Journey button (initially hidden)
     createBeginJourneyButton() {
@@ -824,7 +1191,7 @@ class SampleGamePage extends Phaser.Scene {
             .setTint(0x446688); // Bluish tint to show it's a different screen
             
         // Add sample page title
-        this.add.text(this.cameras.main.centerX, 80, 'SOLARA WORLD', {
+        this.titleText = this.add.text(this.cameras.main.centerX, 80, 'SOLARA WORLD', {
             fontFamily: 'ARCADECLASSIC, Arial',
             fontSize: '48px',
             fill: '#FFFFFF',
@@ -836,7 +1203,7 @@ class SampleGamePage extends Phaser.Scene {
         // Add some placeholder content
         const contentText = "You have entered the world of Solara, where your journey begins. This is where the main gameplay would start, with character creation, exploration, or the first mission. Future development will expand this section with interactive gameplay elements.";
         
-        this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 50, contentText, {
+        this.contentDisplay = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 50, contentText, {
             fontFamily: 'ARCADECLASSIC, Arial',
             fontSize: '24px',
             fill: '#FFFFFF',
@@ -846,17 +1213,17 @@ class SampleGamePage extends Phaser.Scene {
         }).setOrigin(0.5, 0.5);
         
         // Add a character placeholder
-        const characterPlaceholder = this.add.rectangle(
+        this.characterPlaceholder = this.add.rectangle(
             this.cameras.main.centerX,
             this.cameras.main.centerY + 100,
             100,
             150,
             0x00AA55 // Green color for character
         );
-        characterPlaceholder.setStrokeStyle(3, 0xFFFFFF);
+        this.characterPlaceholder.setStrokeStyle(3, 0xFFFFFF);
         
         // Add text below the character
-        this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 190, 'YOUR CHARACTER', {
+        this.characterLabel = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY + 190, 'YOUR CHARACTER', {
             fontFamily: 'ARCADECLASSIC, Arial',
             fontSize: '20px',
             fill: '#FFFFFF',
@@ -906,8 +1273,60 @@ class SampleGamePage extends Phaser.Scene {
             });
         });
         
+        // Add resize handler
+        this.scale.on('resize', this.handleResize, this);
+        
+        // Store button reference
+        this.menuButton = { bg: menuBg, text: menuText };
+        
         // Apply brightness from global settings
         this.applyBrightness(globalSettings.brightness);
+    }
+    
+    // Handle resize event
+    handleResize() {
+        if (!this.scene.isActive()) return;
+        
+        console.log("Resizing SampleGamePage");
+        
+        // Resize background
+        if (this.background) {
+            this.background.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.background.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize darkness overlay if it exists
+        if (this.darknessOverlay) {
+            this.darknessOverlay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY);
+            this.darknessOverlay.setSize(this.cameras.main.width, this.cameras.main.height);
+        }
+        
+        // Resize title
+        if (this.titleText) {
+            this.titleText.setPosition(this.cameras.main.centerX, 80);
+        }
+        
+        // Resize content text
+        if (this.contentDisplay) {
+            this.contentDisplay.setPosition(this.cameras.main.centerX, this.cameras.main.centerY - 50);
+            this.contentDisplay.setWordWrapWidth(this.cameras.main.width * 0.7);
+        }
+        
+        // Resize character placeholder
+        if (this.characterPlaceholder) {
+            this.characterPlaceholder.setPosition(this.cameras.main.centerX, this.cameras.main.centerY + 100);
+        }
+        
+        // Resize character label
+        if (this.characterLabel) {
+            this.characterLabel.setPosition(this.cameras.main.centerX, this.cameras.main.centerY + 190);
+        }
+        
+        // Resize menu button
+        if (this.menuButton) {
+            this.menuButton.bg.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+            this.menuButton.text.setPosition(this.cameras.main.centerX, this.cameras.main.height - 50);
+        }
     }
     
     // Simplified brightness method that works across all renderers
@@ -946,25 +1365,31 @@ class SampleGamePage extends Phaser.Scene {
 
 // Phaser Game Configuration
 const config = {
-    type: Phaser.AUTO, // Try to use WebGL, but fall back to Canvas if needed
-    width: 800,
-    height: 600,
+    type: Phaser.AUTO,
+    width: window.innerWidth,
+    height: window.innerHeight,
     scene: [MainMenu, OptionsScene, GameScene, SampleGamePage],
     scale: {
-        mode: Phaser.Scale.RESIZE, // Change to RESIZE for better fit on all screens
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        parent: 'game-container', // Optional: if you have a container div
         width: '100%',
-        height: '100%'
+        height: '100%',
+        min: {
+            width: 250,
+            height: 250
+        },
+        max: {
+            width: 1920,
+            height: 1080
+        }
     },
     backgroundColor: '#000',
-    pixelArt: true, // Enable pixel art mode for crisp rendering
+    pixelArt: true,
     render: {
         pixelArt: true,
         antialias: false,
         roundPixels: true
     },
-    // Audio config settings
     audio: {
         disableWebAudio: false,
         noAudio: false
@@ -973,3 +1398,19 @@ const config = {
 
 // Create the Phaser game instance
 const game = new Phaser.Game(config);
+
+// Add event listeners for window events
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', () => {
+    // Force resize after orientation change
+    setTimeout(handleResize, 300);
+});
+
+// Error handler to catch and report issues
+window.addEventListener('error', function(event) {
+    console.error('Game error detected:', event.error);
+    alert('Game error: ' + event.error.message + '\nCheck console for details.');
+});
+
+// Force an initial resize when the page loads
+window.addEventListener('load', handleResize);

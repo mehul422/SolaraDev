@@ -11,7 +11,9 @@ Although she has water abilities such as Tidal Wave and Moonblade Throw, she hat
 
 They can both use combo attacks to neutralize much more elemental enemies such as ice and electric, such as Solar Frost Nova, a mainly icy attack, and a Steam Surge attack to affect electric enemies.
 
-Navigate through this storytelling journey through plains, storms, and caverns, as Solis and Lunae battle through hardships in the form of ice, water, electric, and fire enemies to not only discover their unique journey, but how despite multiple arguments and tension rising, two lovers that truly love one another cannot ever be drawn apart. 
+Navigate through this storytelling journey through plains, storms, and caverns, as Solis and Lunae battle through hardships in the form of ice, water, electric, and fire enemies to not only discover their unique journey, but how despite multiple arguments and tension rising, two lovers that truly love one another cannot ever be drawn apart.
+
+NOTE: If you dynamically resize your screen during the synposis introduction portion, the animation will replay to allow the screen to readjust, allowing a much more enjoyable playing experience :D
 
 Enjoy, and let me know what you think.
 
