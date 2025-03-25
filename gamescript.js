@@ -883,7 +883,7 @@ class GameScene extends Phaser.Scene {
         this.crawlTween = this.tweens.add({
             targets: this.crawlText,
             y: -this.crawlText.height, // Move up until it's off the top of the screen
-            duration: 10000, // 30 seconds to complete the crawl
+            duration: 25000, // 25 seconds to complete the crawl
             ease: 'Linear',
             onComplete: () => {
                 // Show Begin Journey button when crawl is complete
