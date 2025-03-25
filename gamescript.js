@@ -1189,16 +1189,6 @@ class SampleGamePage extends Phaser.Scene {
         this.background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, 'background')
             .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
             .setTint(0x446688); // Bluish tint to show it's a different screen
-            
-        // Add sample page title
-        this.titleText = this.add.text(this.cameras.main.centerX, 80, 'SOLARA WORLD', {
-            fontFamily: 'ARCADECLASSIC, Arial',
-            fontSize: '48px',
-            fill: '#FFFFFF',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 4,
-        }).setOrigin(0.5);
         
         // Add some placeholder content with better word wrap
         const contentText = "You have entered the world of Solara, where your journey begins. This is where the main gameplay would start, with character creation, exploration, or the first mission. Future development will expand this section with interactive gameplay elements.";
