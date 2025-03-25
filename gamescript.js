@@ -883,7 +883,7 @@ class GameScene extends Phaser.Scene {
         this.crawlTween = this.tweens.add({
             targets: this.crawlText,
             y: -this.crawlText.height, // Move up until it's off the top of the screen
-            duration: 30000, // 30 seconds to complete the crawl
+            duration: 10000, // 30 seconds to complete the crawl
             ease: 'Linear',
             onComplete: () => {
                 // Show Begin Journey button when crawl is complete
@@ -1176,10 +1176,16 @@ handleResize() {
     }
 }
 
-// Modified SampleGamePage with improved positioning
+// Modified SampleGamePage with fixed character display
 class SampleGamePage extends Phaser.Scene {
     constructor() {
         super('SampleGamePage');
+    }
+
+    preload() {
+        // Load character images
+        this.load.image('solis', 'assets/animations/solis_idle.png');
+        this.load.image('lunae', 'assets/animations/lunae_idle.png');
     }
     
     create() {
@@ -1210,30 +1216,28 @@ class SampleGamePage extends Phaser.Scene {
         
         // Calculate positions and sizes for the two characters
         const baseSize = Math.min(this.cameras.main.width, this.cameras.main.height);
-        const charWidth = baseSize * 0.1; // 10% of screen size (smaller than before)
-        const charHeight = charWidth * 1.8; // Make it taller than wide
+        const charWidth = baseSize * 0.15; // 10% of screen size (smaller than before)
+        const charHeight = charWidth * 2.0; // Make it taller than wide
         
         // Position characters at 60% of screen height - plenty of space from text
-        const charY = this.cameras.main.height * 0.55; 
-        const spacing = Math.max(charWidth * 2, this.cameras.main.width * 0.15); // Wider spacing
+        const charY = this.cameras.main.height * 0.53; 
+        const spacing = Math.max(charWidth * 2.5, this.cameras.main.width * 0.2); // Wider spacing
         
-        // Create Solis character placeholder (left character - blue)
-        this.solisPlaceholder = this.add.rectangle(
-            this.cameras.main.centerX - spacing/2, 
+        // Create Solis character sprite
+        this.solisPlaceholder = this.add.sprite(
+            this.cameras.main.centerX - spacing/2,
             charY,
-            charWidth,
-            charHeight,
-            0x3366CC // Blue color for Solis
-        ).setStrokeStyle(3, 0xFFFFFF);
-        
-        // Create Lunae character placeholder (right character - purple)
-        this.lunaePlaceholder = this.add.rectangle(
-            this.cameras.main.centerX + spacing/2, 
+            'solis'
+        );
+        this.solisPlaceholder.setDisplaySize(charWidth, charHeight);
+
+        // Create Lunae character sprite - FIXED: Removed the rectangle creation that was overwriting this
+        this.lunaePlaceholder = this.add.sprite(
+            this.cameras.main.centerX + spacing/2,
             charY,
-            charWidth,
-            charHeight,
-            0xAA66CC // Purple color for Lunae
-        ).setStrokeStyle(3, 0xFFFFFF);
+            'lunae'
+        );
+        this.lunaePlaceholder.setDisplaySize(charWidth, charHeight);
         
         // Add text below each character - positioned with more space
         this.solisLabel = this.add.text(
@@ -1323,9 +1327,9 @@ class SampleGamePage extends Phaser.Scene {
         
         // Calculate responsive sizes
         const baseSize = Math.min(this.cameras.main.width, this.cameras.main.height);
-        const charWidth = baseSize * 0.1; // 10% of screen size
-        const charHeight = charWidth * 1.8; // Make it taller than wide
-        const spacing = Math.max(charWidth * 2, this.cameras.main.width * 0.15); // Wider spacing
+        const charWidth = baseSize * 0.15; 
+        const charHeight = charWidth * 2.0;
+        const spacing = Math.max(charWidth * 2.5, this.cameras.main.width * 0.2);
         
         // Resize background
         if (this.background) {
@@ -1363,10 +1367,10 @@ class SampleGamePage extends Phaser.Scene {
         // Fixed position for characters - always at 55% of screen height
         const charY = this.cameras.main.height * 0.55;
         
-        // Resize Solis character
+        // Resize Solis character sprite
         if (this.solisPlaceholder) {
             this.solisPlaceholder.setPosition(this.cameras.main.centerX - spacing/2, charY);
-            this.solisPlaceholder.setSize(charWidth, charHeight);
+            this.solisPlaceholder.setDisplaySize(charWidth, charHeight);
             
             // Update Solis label position
             if (this.solisLabel) {
@@ -1380,11 +1384,11 @@ class SampleGamePage extends Phaser.Scene {
                 this.solisLabel.setFontSize(Math.round(labelFontSize * screenScaleFactor));
             }
         }
-        
-        // Resize Lunae character
+
+        // Resize Lunae character sprite - FIXED: Now correctly handles sprite rather than rectangle
         if (this.lunaePlaceholder) {
             this.lunaePlaceholder.setPosition(this.cameras.main.centerX + spacing/2, charY);
-            this.lunaePlaceholder.setSize(charWidth, charHeight);
+            this.lunaePlaceholder.setDisplaySize(charWidth, charHeight);
             
             // Update Lunae label position
             if (this.lunaeLabel) {
